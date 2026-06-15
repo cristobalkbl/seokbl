@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Estrategia Kabilio — Dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg-page: #FAFAF7;
+    --bg-card: #FFFFFF;
+    --bg-soft: #F4F1EA;
+    --bg-info: #E6F1FB;
+    --bg-warning: #FAEEDA;
+    --bg-success: #E1F5EE;
+    --bg-danger: #FCEBEB;
+    --bg-purple: #EEEDFE;
+    --bg-teal: #E1F5EE;
+    --text-primary: #1A1A1A;
+    --text-secondary: #5F5E5A;
+    --text-tertiary: #888780;
+    --text-info: #0C447C;
+    --text-warning: #633806;
+    --text-success: #085041;
+    --text-danger: #791F1F;
+    --text-purple: #3C3489;
+    --text-teal: #0F6E56;
+    --accent: #185FA5;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.15);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-serif: Georgia, "Times New Roman", serif;
+    --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg-page); color: var(--text-primary); font-family: var(--font-sans); font-size: 14px; line-height: 1.55; }
+  .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; transition: grid-template-columns 0.2s ease; }
+  .app.collapsed { grid-template-columns: 64px 1fr; }
+  .sidebar { background: var(--bg-soft); border-right: 1px solid var(--border); padding: 24px 16px 64px; position: sticky; top: 0; height: 100vh; overflow-y: auto; transition: padding 0.2s ease; }
+  .app.collapsed .sidebar { padding: 24px 8px 64px; }
+  .app.collapsed .brand { justify-content: center; }
+  .app.collapsed .brand-name, .app.collapsed .brand-sub, .app.collapsed .nav-item span, .app.collapsed .nav-group { display: none; }
+  .app.collapsed .nav-item { justify-content: center; padding: 10px; }
+  .collapse-btn { position: fixed; bottom: 16px; left: 16px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary); z-index: 10; padding: 0; }
+  .collapse-btn:hover { background: var(--bg-soft); color: var(--text-primary); }
+  .collapse-btn .icon { transition: transform 0.2s ease; }
+  .app.collapsed .collapse-btn .icon { transform: rotate(180deg); }
+  .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; padding: 0 8px; }
+  .brand-name { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+  .brand-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 0; padding: 0 8px; margin-bottom: 24px; }
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: none; background: transparent; cursor: pointer; font-size: 13px; color: var(--text-secondary); text-align: left; border-radius: var(--radius-md); font-family: var(--font-sans); transition: background 0.15s; }
+  .nav-item:hover { background: rgba(0,0,0,0.04); color: var(--text-primary); }
+  .nav-item.active { background: var(--bg-info); color: var(--text-info); font-weight: 500; }
+  .nav-item .icon { color: currentColor; flex-shrink: 0; }
+  .nav-item.active .icon { color: var(--accent); }
+  .nav-group { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.8px; padding: 14px 12px 4px; margin: 0; font-weight: 500; }
+  .nav-group:first-of-type { padding-top: 4px; }
+  .content { padding: 32px 40px; max-width: 920px; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .section-header { margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .section-header .icon { color: var(--accent); }
+  .section h1 { margin: 0; font-size: 22px; font-weight: 500; }
+  .section h3 { margin: 24px 0 12px; font-size: 14px; font-weight: 500; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .section h3 .icon { color: var(--text-tertiary); }
+  .quote { font-family: var(--font-serif); font-size: 16px; line-height: 1.6; padding: 14px 18px; border-left: 3px solid var(--text-info); background: var(--bg-info); color: var(--text-info); border-radius: 0 var(--radius-md) var(--radius-md) 0; margin: 0 0 20px; font-style: italic; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px 16px; }
+  .card-title { font-size: 13px; font-weight: 500; margin: 0 0 6px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .card-title .icon { color: var(--accent); }
+  .card-eyebrow { font-size: 10px; font-weight: 500; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.8px; margin: 0 0 6px; }
+  .card-title-big { font-size: 16px; font-weight: 500; margin: 0 0 8px; color: var(--text-primary); display: flex; align-items: center; gap: 10px; line-height: 1.3; }
+  .card-title-big .icon { color: var(--accent); width: 20px; height: 20px; }
+  .card-body { font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.5; }
+  .stat-card { background: var(--bg-soft); border-radius: var(--radius-md); padding: 12px 14px; }
+  .stat-label { font-size: 11px; color: var(--text-tertiary); margin: 0 0 4px; }
+  .stat-value { font-size: 13px; font-weight: 500; margin: 0; line-height: 1.4; color: var(--text-primary); }
+  .pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 500; line-height: 1.4; }
+  .pill .icon { width: 12px; height: 12px; }
+  .pill-info { background: var(--bg-info); color: var(--text-info); }
+  .pill-warning { background: var(--bg-warning); color: var(--text-warning); }
+  .pill-success { background: var(--bg-success); color: var(--text-success); }
+  .pill-danger { background: var(--bg-danger); color: var(--text-danger); }
+  .pill-gray { background: var(--bg-soft); color: var(--text-secondary); }
+  .pill-purple { background: var(--bg-purple); color: var(--text-purple); }
+  .pill-teal { background: var(--bg-teal); color: var(--text-teal); }
+  .metric-row { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-id { font-weight: 500; flex-shrink: 0; width: 32px; color: var(--text-tertiary); font-size: 11px; padding-top: 2px; }
+  .metric-name { flex: 1; min-width: 0; }
+  .metric-name-text { font-weight: 500; font-size: 13px; color: var(--text-primary); margin: 0 0 3px; }
+  .metric-desc { color: var(--text-secondary); font-size: 12px; line-height: 1.5; margin: 0; }
+  .metric-prio { flex-shrink: 0; }
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-card); cursor: pointer; font-size: 12px; font-family: var(--font-sans); color: var(--text-secondary); }
+  .filter-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+  .filter-btn.active { background: var(--bg-info); color: var(--text-info); border-color: var(--text-info); font-weight: 500; }
+  .htimeline { position: relative; margin: 36px 0 28px; }
+  .htimeline-track { position: absolute; left: 14%; right: 14%; top: 24px; height: 3px; background: var(--accent); z-index: 0; opacity: 0.3; border-radius: 2px; }
+  .htimeline-row { position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; z-index: 1; }
+  .ht-step { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .ht-marker { width: 52px; height: 52px; border-radius: 50%; background: var(--bg-card); color: var(--accent); display: flex; align-items: center; justify-content: center; border: 3px solid var(--accent); box-shadow: 0 0 0 6px var(--bg-page); position: relative; z-index: 2; }
+  .ht-marker .icon { width: 24px; height: 24px; }
+  .ht-year { font-size: 11px; color: var(--text-tertiary); margin: 12px 0 2px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500; }
+  .ht-title { font-size: 13px; font-weight: 500; margin: 0; color: var(--text-primary); }
+  .ht-sub { font-size: 11px; color: var(--text-secondary); margin: 4px 0 0; }
+  .roadmap-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 8px; }
+  .rcard { padding: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+  .rcard-list { font-size: 12px; color: var(--text-secondary); margin: 0; padding-left: 16px; line-height: 1.7; }
+  .badge-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 0; }
+  .risk-card { padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 8px; font-size: 13px; line-height: 1.5; display: flex; gap: 10px; align-items: flex-start; }
+  .risk-card .icon { flex-shrink: 0; margin-top: 2px; }
+  .risk-mitigated { background: var(--bg-success); color: var(--text-success); }
+  .risk-pending { background: var(--bg-warning); color: var(--text-warning); }
+  .decision-card { padding: 14px 16px; background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 var(--radius-md) var(--radius-md) 0; margin-bottom: 10px; font-size: 13px; line-height: 1.5; }
+  .decision-card .num { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background: var(--bg-info); color: var(--text-info); font-weight: 500; margin-right: 10px; font-size: 12px; }
+  .next-list { font-size: 13px; color: var(--text-secondary); padding-left: 20px; line-height: 1.7; margin: 0; }
+  .icon { width: 16px; height: 16px; flex-shrink: 0; display: inline-block; vertical-align: middle; }
+  .icon-lg { width: 20px; height: 20px; }
+  .icon-xl { width: 24px; height: 24px; }
+  .ptabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .ptab { padding: 10px 14px; border: none; background: transparent; cursor: pointer; font-size: 13px; color: var(--text-secondary); font-family: var(--font-sans); border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; align-items: center; gap: 8px; }
+  .ptab:hover { color: var(--text-primary); }
+  .ptab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 500; }
+  .ptab .icon { width: 14px; height: 14px; }
+  .ppane { display: none; }
+  .ppane.active { display: block; }
+  .ppane h3:first-of-type { margin-top: 0; }
+  .card.clickable, .stat-card.clickable { cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.15s; }
+  .card.clickable:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .stat-card.clickable:hover { background: var(--bg-info); }
+  .clickable-hint { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-tertiary); margin-top: 8px; }
+  .clickable-hint .icon { width: 12px; height: 12px; }
+  .card.clickable:hover .clickable-hint { color: var(--accent); }
+  .url-block { font-family: var(--font-mono); font-size: 12px; background: var(--bg-soft); padding: 10px 12px; border-radius: var(--radius-md); margin: 6px 0; border-left: 3px solid var(--accent); display: block; color: var(--text-primary); }
+  .url-block .placeholder { color: var(--accent); font-style: italic; }
+  .url-group { margin-bottom: 16px; }
+  .url-group-title { font-size: 13px; font-weight: 500; margin: 0 0 6px; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+  .url-group-title .icon { color: var(--text-tertiary); }
+  .url-desc { font-size: 12px; color: var(--text-secondary); margin: 0 0 8px; }
+  .pildora-mock { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; max-width: 460px; }
+  .pildora-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .pildora-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-weight: 500; font-size: 14px; }
+  .pildora-name { font-weight: 500; font-size: 13px; margin: 0; }
+  .pildora-sub { font-size: 11px; color: var(--text-tertiary); margin: 2px 0 0; }
+  .pildora-body { font-size: 13px; line-height: 1.5; margin: 0 0 12px; }
+  .pildora-stat { background: var(--bg-info); padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 10px; }
+  .pildora-stat-num { font-size: 22px; font-weight: 600; color: var(--text-info); margin: 0; }
+  .pildora-stat-lbl { font-size: 11px; color: var(--text-info); margin: 2px 0 0; }
+  .pildora-hashtag { font-size: 12px; color: var(--accent); }
+  .cadencia-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 12px 0 20px; }
+  .cadencia-item { background: var(--bg-soft); padding: 10px 12px; border-radius: var(--radius-md); }
+  .cadencia-year { font-size: 10px; color: var(--text-tertiary); margin: 0; text-transform: uppercase; letter-spacing: 0.5px; }
+  .cadencia-freq { font-size: 13px; font-weight: 500; margin: 4px 0 2px; color: var(--text-primary); }
+  .cadencia-pubs { font-size: 11px; color: var(--text-secondary); margin: 0; }
+  .flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 8px; margin: 16px 0; }
+  .flow-step { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 12px; text-align: center; }
+  .flow-step .icon { width: 22px; height: 22px; color: var(--accent); margin-bottom: 6px; }
+  .flow-step-title { font-size: 12px; font-weight: 500; margin: 0; color: var(--text-primary); }
+  .flow-step-sub { font-size: 10px; color: var(--text-tertiary); margin: 2px 0 0; }
+  .flow-arrow { color: var(--text-tertiary); }
+  /* Kanban */
+  .kanban-toolbar { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; padding: 12px 14px; background: var(--bg-soft); border-radius: var(--radius-md); }
+  .kanban-stat { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
+  .kanban-stat strong { color: var(--text-primary); font-weight: 500; }
+  .kanban-stat .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot-todo { background: #888780; }
+  .dot-doing { background: #185FA5; }
+  .dot-done { background: #0F6E56; }
+  .kanban-spacer { flex: 1; }
+  .kanban-add-btn { padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--accent); background: var(--accent); color: white; cursor: pointer; font-size: 12px; font-family: var(--font-sans); display: flex; align-items: center; gap: 6px; }
+  .kanban-add-btn:hover { background: #0C447C; }
+  .kanban-add-form { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 16px; display: none; }
+  .kanban-add-form.open { display: block; }
+  .kanban-add-form input, .kanban-add-form textarea, .kanban-add-form select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-md); font-family: var(--font-sans); font-size: 13px; margin-bottom: 8px; background: var(--bg-page); color: var(--text-primary); }
+  .kanban-add-form textarea { resize: vertical; min-height: 50px; }
+  .kanban-add-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .kanban-add-form .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+  .kanban-add-form button { padding: 6px 12px; border-radius: var(--radius-md); cursor: pointer; font-size: 12px; font-family: var(--font-sans); }
+  .kanban-add-form button[type=submit] { background: var(--accent); color: white; border: 1px solid var(--accent); }
+  .kanban-add-form button.cancel { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .kanban-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .kfilter-btn { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-card); cursor: pointer; font-size: 11px; font-family: var(--font-sans); color: var(--text-secondary); }
+  .kfilter-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+  .kfilter-btn.active { background: var(--text-primary); color: white; border-color: var(--text-primary); }
+  .kanban { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .kcol { background: var(--bg-soft); border-radius: var(--radius-lg); padding: 12px; min-height: 200px; }
+  .kcol-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding: 0 4px; }
+  .kcol-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); margin: 0; display: flex; align-items: center; gap: 6px; }
+  .kcol-count { background: var(--bg-card); padding: 2px 8px; border-radius: 999px; font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+  .ktask { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 8px; transition: border-color 0.15s; }
+  .ktask:hover { border-color: var(--border-strong); }
+  .ktask-cat { display: inline-block; font-size: 9px; padding: 2px 8px; border-radius: 999px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .ktask-title { font-size: 12px; font-weight: 500; margin: 0 0 4px; line-height: 1.35; color: var(--text-primary); }
+  .ktask-desc { font-size: 11px; color: var(--text-secondary); margin: 0 0 8px; line-height: 1.45; }
+  .ktask-notes { font-size: 11px; color: var(--text-secondary); background: var(--bg-soft); padding: 6px 8px; border-radius: var(--radius-md); margin: 0 0 8px; white-space: pre-wrap; word-wrap: break-word; }
+  .ktask-actions { display: flex; gap: 4px; align-items: center; }
+  .ktask-actions select { padding: 4px 6px; border-radius: var(--radius-md); border: 1px solid var(--border); font-size: 10px; background: var(--bg-page); color: var(--text-secondary); cursor: pointer; font-family: var(--font-sans); flex: 1; }
+  .ktask-btn { background: transparent; border: 1px solid var(--border); cursor: pointer; padding: 4px 6px; color: var(--text-tertiary); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; }
+  .ktask-btn:hover { color: var(--text-primary); border-color: var(--border-strong); }
+  .ktask-btn .icon { width: 12px; height: 12px; }
+  .ktask-edit-form { background: var(--bg-page); padding: 8px; border-radius: var(--radius-md); margin-top: 6px; border: 1px solid var(--accent); }
+  .ktask-edit-form input, .ktask-edit-form textarea, .ktask-edit-form select { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-md); font-family: var(--font-sans); font-size: 11px; margin-bottom: 6px; }
+  .ktask-edit-form .actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .ktask-edit-form button { padding: 4px 10px; border-radius: var(--radius-md); cursor: pointer; font-size: 11px; font-family: var(--font-sans); }
+  .ktask-edit-form button[type=submit] { background: var(--accent); color: white; border: 1px solid var(--accent); }
+  .ktask-edit-form button.cancel { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .cat-bloqueante { background: #FCEBEB; color: #791F1F; }
+  .cat-decision { background: #FAEEDA; color: #633806; }
+  .cat-pulso { background: #E6F1FB; color: #0C447C; }
+  .cat-encuesta { background: #E1F5EE; color: #0F6E56; }
+  .cat-certificacion { background: #EEEDFE; color: #3C3489; }
+  .cat-seo { background: #F4F1EA; color: #5F5E5A; }
+  .cat-eventos { background: #FAEEDA; color: #633806; }
+  .cat-marca { background: #EAF3DE; color: #3B6D11; }
+  .cat-gobernanza { background: #FBEAF0; color: #72243E; }
+  .kanban-empty { color: var(--text-tertiary); font-size: 11px; text-align: center; padding: 20px 8px; font-style: italic; }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { padding: 16px; position: relative; height: auto; }
+    .content { padding: 20px; }
+    .grid-2, .grid-3, .htimeline-row, .roadmap-cards, .cadencia-bar, .kanban { grid-template-columns: 1fr; }
+    .htimeline-track { display: none; }
+    .flow { grid-template-columns: 1fr; }
+    .flow-arrow { transform: rotate(90deg); }
+    .kanban-add-form .row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<svg style="position:absolute;width:0;height:0;overflow:hidden" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-9a3.5 3.5 0 0 1 0-7H12"/></symbol>
+    <symbol id="i-heartbeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h3l2-5 4 10 3-7 2 2h4"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 19 9 14 12 17 20 8"/><polyline points="14 8 20 8 20 14"/></symbol>
+    <symbol id="i-cert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="6"/><polyline points="9 14.5 9 21 12 19 15 21 15 14.5"/></symbol>
+    <symbol id="i-confetti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2M19 7l-1 1M5 19l-1 1M11 4l-1 1M20 13l-1 1"/><path d="M14 7l3 3"/><path d="M10 11l-7 7 4 4 7-7z"/></symbol>
+    <symbol id="i-shield-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+    <symbol id="i-shield-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></symbol>
+    <symbol id="i-shield-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polygon points="12 8 13.2 10.6 16 11 14 13 14.5 16 12 14.5 9.5 16 10 13 8 11 10.8 10.6"/></symbol>
+    <symbol id="i-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l3-10 5 7 1-9 1 9 5-7 3 10z"/><line x1="4" y1="20" x2="20" y2="20"/></symbol>
+    <symbol id="i-briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/><line x1="3" y1="14" x2="21" y2="14"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="14" height="14" rx="1"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="2" x2="9" y2="5"/><line x1="15" y1="2" x2="15" y2="5"/><line x1="9" y1="19" x2="9" y2="22"/><line x1="15" y1="19" x2="15" y2="22"/><line x1="19" y1="9" x2="22" y2="9"/><line x1="19" y1="15" x2="22" y2="15"/><line x1="2" y1="9" x2="5" y2="9"/><line x1="2" y1="15" x2="5" y2="15"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21c.5-6 5-13 16-16 0 6-4 13-12 16-2 1-4 0-4 0z"/><path d="M5 21c4-4 7-7 12-11"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><circle cx="17" cy="8" r="3"/><path d="M21 21v-1a4 4 0 0 0-3-3.87"/></symbol>
+    <symbol id="i-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="9 12 11 14 15 10"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+    <symbol id="i-bullhorn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v3a1 1 0 0 0 1 1h3l5 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M17 8a5 5 0 0 1 0 8"/></symbol>
+    <symbol id="i-building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v13"/><line x1="4" y1="21" x2="20" y2="21"/><line x1="8" y1="11" x2="10" y2="11"/><line x1="14" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="10" y2="15"/><line x1="14" y1="15" x2="16" y2="15"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 4H4v3a3 3 0 0 0 3 3M17 4h3v3a3 3 0 0 1-3 3"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="20" y1="20" x2="16.5" y2="16.5"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h2l2-5 4 10 3-7 2 2h5"/><circle cx="20" cy="12" r="1"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 4 15 6 21 4 21 18 15 20 9 18 3 20"/><line x1="9" y1="4" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="20"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V4M4 4l8 1 8-1v10l-8 1-8-1"/></symbol>
+    <symbol id="i-rocket" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-9 9-3-3z"/><path d="M14 4l5 1 1 5"/><path d="M9 16l-3 1 1-3"/><circle cx="16" cy="8" r="1"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="18" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="15" y2="15"/></symbol>
+    <symbol id="i-magnet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v6a5 5 0 0 0 10 0V4"/><path d="M7 4h4M13 4h4M7 10h4M13 10h4"/></symbol>
+    <symbol id="i-database" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 11v6c0 1.66 4 3 9 3s9-1.34 9-3v-6"/></symbol>
+    <symbol id="i-linkedin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="11" x2="8" y2="17"/><line x1="8" y1="8" x2="8.01" y2="8"/><path d="M12 17v-3a2 2 0 0 1 4 0v3"/><path d="M12 11v6"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/></symbol>
+    <symbol id="i-survey" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 10l2 2 4-4"/><line x1="14" y1="14" x2="17" y2="14"/><line x1="8" y1="17" x2="17" y2="17"/></symbol>
+    <symbol id="i-trending-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 17 9 11 13 15 21 7"/><polyline points="14 7 21 7 21 14"/></symbol>
+    <symbol id="i-medal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="15" r="6"/><path d="M8 9L5 2h14l-3 7"/><circle cx="12" cy="15" r="2"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-12 12H2v-6z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-kanban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="6" height="18" rx="1"/><rect x="11" y="3" width="6" height="12" rx="1"/><rect x="19" y="3" width="2" height="8" rx="1"/></symbol>
+  </defs>
+</svg>
+
+<div class="app" id="app">
+  <button class="collapse-btn" id="collapse-btn" aria-label="Comprimir o expandir menú lateral"><svg class="icon"><use href="#i-chevron-left"/></svg></button>
+  <aside class="sidebar">
+    <div class="brand">
+      <svg class="icon icon-xl" style="color: var(--accent)"><use href="#i-pulse"/></svg>
+      <span class="brand-name">Kabilio</span>
+    </div>
+    <p class="brand-sub">Estrategia de marketing · Plan a 3 años</p>
+    <nav class="nav" id="nav">
+      <p class="nav-group">Marco</p>
+      <button class="nav-item active" data-target="s-oport"><svg class="icon"><use href="#i-zap"/></svg><span>Oportunidad</span></button>
+      <button class="nav-item" data-target="s-north"><svg class="icon"><use href="#i-target"/></svg><span>North Star</span></button>
+      <button class="nav-item" data-target="s-activos"><svg class="icon"><use href="#i-grid"/></svg><span>Cuatro activos</span></button>
+      <button class="nav-item" data-target="s-roadmap"><svg class="icon"><use href="#i-route"/></svg><span>Hoja de ruta</span></button>
+      <p class="nav-group">Activos</p>
+      <button class="nav-item" data-target="s-pulso"><svg class="icon"><use href="#i-heartbeat"/></svg><span>Pulso Kabilio</span></button>
+      <button class="nav-item" data-target="s-evaluacion"><svg class="icon"><use href="#i-survey"/></svg><span>Sistema de Evaluación</span></button>
+      <button class="nav-item" data-target="s-cert"><svg class="icon"><use href="#i-cert"/></svg><span>Certificación</span></button>
+      <button class="nav-item" data-target="s-eventos"><svg class="icon"><use href="#i-confetti"/></svg><span>Eventos y Premios</span></button>
+      <p class="nav-group">Soporte</p>
+      <button class="nav-item" data-target="s-seo"><svg class="icon"><use href="#i-link"/></svg><span>SEO &amp; Data Hub</span></button>
+      <button class="nav-item" data-target="s-riesgos"><svg class="icon"><use href="#i-shield-warn"/></svg><span>Riesgos</span></button>
+      <button class="nav-item" data-target="s-next"><svg class="icon"><use href="#i-arrow-right"/></svg><span>Próximos pasos</span></button>
+      <p class="nav-group">Ejecución</p>
+      <button class="nav-item" data-target="s-status"><svg class="icon"><use href="#i-kanban"/></svg><span>Status del plan</span></button>
+    </nav>
+  </aside>
+
+  <main class="content">
+
+    <section class="section active" id="s-oport">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-zap"/></svg><h1>La oportunidad</h1></div>
+      <p class="quote">Hoy nadie publica datos de medición transaccional real sobre la pyme española. Todos encuestan. Kabilio puede ocupar esa categoría primero y apropiársela.</p>
+      <h3><svg class="icon"><use href="#i-search"/></svg>El gap del mercado</h3>
+      <div class="grid-2">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-clipboard"/></svg>Lo que existe hoy</p><p class="card-body">Barómetros de Cepyme, Iberinform, FUNCAS, Banco de España, bancos privados. Todos basados en encuestas declarativas con semanas o meses de retraso.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-database"/></svg>Lo que Kabilio puede aportar</p><p class="card-body">Medición transaccional real, en tiempo casi real. Cobros conciliados, gastos categorizados por IA, liquidez bancaria efectiva.</p></div>
+      </div>
+      <h3><svg class="icon"><use href="#i-trending-up"/></svg>Por qué ahora</h3>
+      <div class="grid-3">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-flag"/></svg>Ventana normativa</p><p class="card-body">Verifactu y la facturación electrónica B2B generan atención mediática durante varios años.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-rocket"/></svg>Categoría vacía</p><p class="card-body">Ningún competidor ha construido autoridad de marca basada en datos propios.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-pulse"/></svg>Ciclo macro</p><p class="card-body">La tensión de liquidez de la pyme mantiene la demanda mediática sobre cobro e impago.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="s-north">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-target"/></svg><h1>North Star a 3 años</h1></div>
+      <p class="quote">Que en 2029, Kabilio sea citado como la fuente autorizada sobre la economía real de la pyme española y como referente del sector de la asesoría contable digital.</p>
+      <h3><svg class="icon"><use href="#i-grid"/></svg>Cinco dimensiones operativas</h3>
+      <div class="grid-2">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-bullhorn"/></svg>Autoridad mediática</p><p class="card-body">Presencia regular en tier 1 (Cinco Días, Expansión, El Economista) y prensa regional.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-building"/></svg>Reconocimiento institucional</p><p class="card-body">Convenios con asociaciones profesionales (AECE, FETTAF, Colegios).</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-trophy"/></svg>Liderazgo de categoría</p><p class="card-body">Sello Kabilio reconocido por los despachos profesionales.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-search"/></svg>Autoridad de dominio</p><p class="card-body">Tráfico orgánico mensual, backlinks y posicionamiento líder.</p></div>
+        <div class="card" style="grid-column: span 2;"><p class="card-title"><svg class="icon"><use href="#i-chart"/></svg>Conversión y funnel digital</p><p class="card-body">Descargas registradas del Pulso, postulaciones inbound al Sistema de Evaluación, demos solicitadas.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="s-activos">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-grid"/></svg><h1>Cuatro activos independientes</h1></div>
+      <div class="grid-2">
+        <div class="card clickable" data-nav="s-pulso" tabindex="0" role="button" aria-label="Ir a Pulso Kabilio">
+          <p class="card-eyebrow">Activo 01</p>
+          <p class="card-title-big"><svg class="icon"><use href="#i-heartbeat"/></svg>Pulso Kabilio</p>
+          <p class="card-body">Informe periódico de datos macro pyme. Píldoras continuas en LinkedIn. Data Hub público estilo datosmacro.</p>
+          <div class="badge-list"><span class="pill pill-info">Brand authority</span></div>
+          <p class="clickable-hint">Ver detalle <svg class="icon"><use href="#i-arrow-right"/></svg></p>
+        </div>
+        <div class="card clickable" data-nav="s-evaluacion" tabindex="0" role="button" aria-label="Ir a Sistema de Evaluación">
+          <p class="card-eyebrow">Activo 02</p>
+          <p class="card-title-big"><svg class="icon"><use href="#i-survey"/></svg>Sistema de Evaluación</p>
+          <p class="card-body">Encuesta nacional abierta a despachos + encuesta a sus pymes. Lead magnet. Ranking público del sector.</p>
+          <div class="badge-list"><span class="pill pill-info">Lead magnet</span><span class="pill pill-teal">Encuesta nacional</span></div>
+          <p class="clickable-hint">Ver detalle <svg class="icon"><use href="#i-arrow-right"/></svg></p>
+        </div>
+        <div class="card clickable" data-nav="s-cert" tabindex="0" role="button" aria-label="Ir a Certificación">
+          <p class="card-eyebrow">Activo 03</p>
+          <p class="card-title-big"><svg class="icon"><use href="#i-cert"/></svg>Sistema de Certificación</p>
+          <p class="card-body">Sellos públicos para despachos. Mecanismo de retención y canal de adquisición.</p>
+          <div class="badge-list"><span class="pill pill-info">Retención</span><span class="pill pill-info">Marketplace de facto</span></div>
+          <p class="clickable-hint">Ver detalle <svg class="icon"><use href="#i-arrow-right"/></svg></p>
+        </div>
+        <div class="card clickable" data-nav="s-eventos" tabindex="0" role="button" aria-label="Ir a Eventos y Premios">
+          <p class="card-eyebrow">Activo 04</p>
+          <p class="card-title-big"><svg class="icon"><use href="#i-confetti"/></svg>Eventos y Premios</p>
+          <p class="card-body">Piloto regional → evento nacional → gran cumbre anual con premios.</p>
+          <div class="badge-list"><span class="pill pill-info">PR concentrado</span></div>
+          <p class="clickable-hint">Ver detalle <svg class="icon"><use href="#i-arrow-right"/></svg></p>
+        </div>
+      </div>
+      <h3><svg class="icon"><use href="#i-map"/></svg>Doble capa SEO transversal</h3>
+      <div class="grid-2">
+        <div class="stat-card clickable" data-nav="s-seo" tabindex="0" role="button"><p class="stat-label">Capa A — Data Hub público</p><p class="stat-value">SEO programático sobre datos del Pulso</p></div>
+        <div class="stat-card clickable" data-nav="s-seo" tabindex="0" role="button"><p class="stat-label">Capa B — Ranking SEO geográfico</p><p class="stat-value">Despachos rankeados por zona y sector</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="s-roadmap">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-route"/></svg><h1>Hoja de ruta MVP a 3 años</h1></div>
+      <div class="htimeline">
+        <div class="htimeline-track"></div>
+        <div class="htimeline-row">
+          <div class="ht-step"><div class="ht-marker"><svg class="icon"><use href="#i-rocket"/></svg></div><p class="ht-year">Año 1</p><p class="ht-title">MVP creíble</p><p class="ht-sub">Construir cimientos</p></div>
+          <div class="ht-step"><div class="ht-marker"><svg class="icon"><use href="#i-trending-up"/></svg></div><p class="ht-year">Año 2</p><p class="ht-title">Consolidación</p><p class="ht-sub">Profundizar autoridad</p></div>
+          <div class="ht-step"><div class="ht-marker"><svg class="icon"><use href="#i-medal"/></svg></div><p class="ht-year">Año 3</p><p class="ht-title">Referencia</p><p class="ht-sub">Estándar de facto</p></div>
+        </div>
+      </div>
+      <div class="roadmap-cards">
+        <div class="rcard">
+          <p class="card-title"><svg class="icon"><use href="#i-rocket"/></svg>Año 1 · MVP creíble</p>
+          <ul class="rcard-list"><li>Primer Pulso Kabilio (semestral)</li><li>Píldoras semanales en LinkedIn</li><li>Data Hub público lanzado</li><li>Lanzamiento encuesta nacional</li><li>Primer ranking básico</li><li>Evento piloto regional</li></ul>
+        </div>
+        <div class="rcard">
+          <p class="card-title"><svg class="icon"><use href="#i-trending-up"/></svg>Año 2 · Consolidación</p>
+          <ul class="rcard-list"><li>Pulso cuatrimestral (3/año)</li><li>Píldoras semanales consolidadas</li><li>Ranking nacional ampliado</li><li>Comité externo formal</li><li>Certificación con tiers</li><li>Primer evento nacional</li></ul>
+        </div>
+        <div class="rcard">
+          <p class="card-title"><svg class="icon"><use href="#i-medal"/></svg>Año 3 · Referencia</p>
+          <ul class="rcard-list"><li>Pulso trimestral pleno</li><li>Índice Kabilio compuesto</li><li>Índice de Excelencia auditado</li><li>Gran cumbre anual</li><li>Premio Despacho del Año</li><li>Reconocimiento institucional</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="s-pulso">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-heartbeat"/></svg><h1>Pulso Kabilio</h1></div>
+      <p class="quote">Informe periódico con datos macro reales sobre la economía pyme y la asesoría contable. Vive en dos planos: el informe trimestral y la corriente continua de píldoras en redes.</p>
+      <div class="ptabs" data-group="pulso">
+        <button class="ptab active" data-target="pulso-metricas"><svg class="icon"><use href="#i-database"/></svg>Métricas e informe</button>
+        <button class="ptab" data-target="pulso-distribucion"><svg class="icon"><use href="#i-linkedin"/></svg>Distribución de marca</button>
+        <button class="ptab" data-target="pulso-interna"><svg class="icon"><use href="#i-users"/></svg>Amplificación interna</button>
+      </div>
+      <div class="ppane active" data-group="pulso" id="pulso-metricas">
+        <h3><svg class="icon"><use href="#i-calendar"/></svg>Cadencia evolutiva del informe</h3>
+        <div class="cadencia-bar">
+          <div class="cadencia-item"><p class="cadencia-year">Año 1</p><p class="cadencia-freq">Semestral</p><p class="cadencia-pubs">2 publicaciones</p></div>
+          <div class="cadencia-item"><p class="cadencia-year">Año 2</p><p class="cadencia-freq">Cuatrimestral</p><p class="cadencia-pubs">3 publicaciones</p></div>
+          <div class="cadencia-item"><p class="cadencia-year">Año 3</p><p class="cadencia-freq">Trimestral</p><p class="cadencia-pubs">4 + Índice Kabilio</p></div>
+        </div>
+        <h3><svg class="icon"><use href="#i-database"/></svg>14 métricas para producto</h3>
+        <div class="filter-bar">
+          <button class="filter-btn active" data-filter="all">Todas (14)</button>
+          <button class="filter-btn" data-filter="A">Bloque A — Pyme (6)</button>
+          <button class="filter-btn" data-filter="B">Bloque B — Asesoría (8)</button>
+        </div>
+        <div id="metrics-list">
+          <div class="metric-row" data-block="A"><div class="metric-id">A1</div><div class="metric-name"><p class="metric-name-text">Días reales de cobro</p><p class="metric-desc">Días desde emisión de factura hasta conciliación bancaria del cobro.</p></div><div class="metric-prio"><span class="pill pill-danger">Imprescindible</span></div></div>
+          <div class="metric-row" data-block="A"><div class="metric-id">A2</div><div class="metric-name"><p class="metric-name-text">Tasa de impago real</p><p class="metric-desc">% de facturas emitidas no conciliadas tras 6 meses.</p></div><div class="metric-prio"><span class="pill pill-warning">Importante</span></div></div>
+          <div class="metric-row" data-block="A"><div class="metric-id">A3</div><div class="metric-name"><p class="metric-name-text">Inflación operativa real</p><p class="metric-desc">Variación trimestral del coste por categoría vs IPC oficial.</p></div><div class="metric-prio"><span class="pill pill-danger">Imprescindible</span></div></div>
+          <div class="metric-row" data-block="A"><div class="metric-id">A4</div><div class="metric-name"><p class="metric-name-text">Pulso de actividad económica</p><p class="metric-desc">Volumen de facturas emitidas con variación interanual.</p></div><div class="metric-prio"><span class="pill pill-warning">Importante</span></div></div>
+          <div class="metric-row" data-block="A"><div class="metric-id">A5</div><div class="metric-name"><p class="metric-name-text">Días de liquidez de la pyme</p><p class="metric-desc">Días de oxígeno con caja actual frente a vencimientos a 30/60/90 días.</p></div><div class="metric-prio"><span class="pill pill-warning">Importante</span></div></div>
+          <div class="metric-row" data-block="A"><div class="metric-id">A6</div><div class="metric-name"><p class="metric-name-text">Días reales de pago</p><p class="metric-desc">Días desde recepción de factura de gasto hasta su pago bancario.</p></div><div class="metric-prio"><span class="pill pill-danger">Imprescindible</span></div></div>
+          <div class="metric-row" data-block="B"><div class="metric-id">B1</div><div class="metric-name"><p class="metric-name-text">Tamaño medio de cartera por asesoría</p><p class="metric-desc">Distribución y curva de Pareto del sector contable.</p></div><div class="metric-prio"><span class="pill pill-danger">Imprescindible</span></div></div>
+          <div class="metric-row" data-block="B"><div class="metric-id">B2</div><div class="metric-name"><p class="metric-name-text">Volumen documental y carga por despacho</p><p class="metric-desc">Documentos procesados en últimos 30/60/90 días por despacho.</p></div><div class="metric-prio"><span class="pill pill-danger">Imprescindible</span></div></div>
+          <div class="metric-row" data-block="B"><div class="metric-id">B3</div><div class="metric-name"><p class="metric-name-text">Tiempo recepción → procesamiento</p><p class="metric-desc">Horas o días desde que llega un documento hasta registro contable.</p></div><div class="metric-prio"><span class="pill pill-warning">Importante</span></div></div>
+          <div class="metric-row" data-block="B"><div class="metric-id">B4</div><div class="metric-name"><p class="metric-name-text">Tiempo de cierre contable mensual</p><p class="metric-desc">Días desde fin de mes hasta entrega del cierre al cliente.</p></div><div class="metric-prio"><span class="pill pill-warning">Importante</span></div></div>
+          <div class="metric-row" data-block="B"><div class="metric-id">B5</div><div class="metric-name"><p class="metric-name-text">Composición de cartera del despacho</p><p class="metric-desc">% autónomos, micropymes y pymes en la cartera promedio.</p></div><div class="metric-prio"><span class="pill pill-warning">Importante</span></div></div>
+          <div class="metric-row" data-block="B"><div class="metric-id">B6</div><div class="metric-name"><p class="metric-name-text">Crecimiento de cartera</p><p class="metric-desc">Variación del número de clientes por despacho.</p></div><div class="metric-prio"><span class="pill pill-gray">Opcional</span></div></div>
+          <div class="metric-row" data-block="B"><div class="metric-id">B7</div><div class="metric-name"><p class="metric-name-text">Rotación de clientes entre despachos</p><p class="metric-desc">% pymes que cambian de despacho al año.</p></div><div class="metric-prio"><span class="pill pill-gray">Opcional</span></div></div>
+          <div class="metric-row" data-block="B"><div class="metric-id">B8</div><div class="metric-name"><p class="metric-name-text">Patrones temporales y estacionalidad</p><p class="metric-desc">Actividad por día, hora, posición intra-mes y semana del año.</p></div><div class="metric-prio"><span class="pill pill-gray">Deep dive</span></div></div>
+        </div>
+      </div>
+      <div class="ppane" data-group="pulso" id="pulso-distribucion">
+        <h3><svg class="icon"><use href="#i-linkedin"/></svg>Distribución continua en LinkedIn</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 12px;">Píldoras semanales bajo la marca Pulso Kabilio. Cada una es un post autónomo con un dato fuerte y visualización mínima. Mantiene la marca activa todo el año entre informes. Hashtag <span style="color: var(--accent);">#PulsoKabilio</span>.</p>
+        <div class="cadencia-bar">
+          <div class="cadencia-item"><p class="cadencia-year">Año 1</p><p class="cadencia-freq">Quincenal</p><p class="cadencia-pubs">25-40 píldoras</p></div>
+          <div class="cadencia-item"><p class="cadencia-year">Año 2</p><p class="cadencia-freq">Semanal</p><p class="cadencia-pubs">~50 píldoras</p></div>
+          <div class="cadencia-item"><p class="cadencia-year">Año 3</p><p class="cadencia-freq">Semanal + picos</p><p class="cadencia-pubs">Sincronizadas al Pulso</p></div>
+        </div>
+        <div class="pildora-mock">
+          <div class="pildora-header">
+            <div class="pildora-avatar">K</div>
+            <div><p class="pildora-name">Pulso Kabilio</p><p class="pildora-sub">Hace 2 días</p></div>
+          </div>
+          <p class="pildora-body">El hostelero español cobra 22 días más tarde que el comercio minorista. Dato medido sobre cobros conciliados reales, no encuestados.</p>
+          <div class="pildora-stat">
+            <p class="pildora-stat-num">67 días</p>
+            <p class="pildora-stat-lbl">Días medios de cobro en hostelería · Q2 2026</p>
+          </div>
+          <p class="pildora-hashtag">#PulsoKabilio #morosidad #hosteleria</p>
+        </div>
+      </div>
+      <div class="ppane" data-group="pulso" id="pulso-interna">
+        <h3><svg class="icon"><use href="#i-bullhorn"/></svg>Por qué amplificar desde perfiles personales</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 16px;">En LinkedIn los perfiles personales generan tres a cinco veces más engagement que las páginas de empresa. La marca publica el dato; los perfiles del equipo lo amplifican desde cinco ángulos distintos, cada uno con su voz editorial.</p>
+        <h3><svg class="icon"><use href="#i-users"/></svg>Cast de voces internas</h3>
+        <div class="grid-2">
+          <div class="card"><p class="card-title"><svg class="icon"><use href="#i-target"/></svg>CEO · Visión y postura</p><p class="card-body">Defensa pública del sector, posicionamiento anti-DIY fiscal, lectura estratégica del dato.</p></div>
+          <div class="card"><p class="card-title"><svg class="icon"><use href="#i-cpu"/></svg>Head of Data · Rigor metodológico</p><p class="card-body">Cómo se calculó cada dato. Comparativas con INE. Limitaciones de muestra.</p></div>
+          <div class="card"><p class="card-title"><svg class="icon"><use href="#i-bullhorn"/></svg>Head of Marketing · Narrativa</p><p class="card-body">Observaciones del trabajo contable real. Storytelling sobre despachos.</p></div>
+          <div class="card"><p class="card-title"><svg class="icon"><use href="#i-users"/></svg>Customer Success · Voz del cliente</p><p class="card-body">Aprendizajes de los despachos. Best practices sin nombres.</p></div>
+        </div>
+        <h3><svg class="icon"><use href="#i-leaf"/></svg>Estrategia para que sea natural</h3>
+        <div class="grid-2">
+          <div class="card"><p class="card-title"><svg class="icon"><use href="#i-check-circle"/></svg>Una voz, no cinco megáfonos</p><p class="card-body">Cada perfil tiene su línea editorial. Nadie repite el copy de la marca.</p></div>
+          <div class="card"><p class="card-title"><svg class="icon"><use href="#i-calendar"/></svg>Mezcla 60/40</p><p class="card-body">60% temas propios. 40% amplificación del Pulso.</p></div>
+          <div class="card"><p class="card-title"><svg class="icon"><use href="#i-pulse"/></svg>Cadencia humana</p><p class="card-body">1-2 posts por semana por persona máximo.</p></div>
+          <div class="card"><p class="card-title"><svg class="icon"><use href="#i-link"/></svg>Interacción genuina</p><p class="card-body">Se comentan entre ellos sin script. Conversación interna sostiene alcance.</p></div>
+        </div>
+        <h3><svg class="icon"><use href="#i-magnet"/></svg>Cómo se convierten posts en leads</h3>
+        <div class="flow">
+          <div class="flow-step"><svg class="icon"><use href="#i-linkedin"/></svg><p class="flow-step-title">Post en perfil personal</p><p class="flow-step-sub">Engagement orgánico + bio con CTA</p></div>
+          <span class="flow-arrow"><svg class="icon"><use href="#i-arrow-right"/></svg></span>
+          <div class="flow-step"><svg class="icon"><use href="#i-search"/></svg><p class="flow-step-title">SDR identifica comentadores</p><p class="flow-step-sub">Despachos, periodistas, asociaciones</p></div>
+          <span class="flow-arrow"><svg class="icon"><use href="#i-arrow-right"/></svg></span>
+          <div class="flow-step"><svg class="icon"><use href="#i-users"/></svg><p class="flow-step-title">Outreach personal por DM</p><p class="flow-step-sub">Conversación, no pitch</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="s-evaluacion">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-survey"/></svg><h1>Sistema de Evaluación</h1></div>
+      <p class="quote">Encuesta nacional abierta a todos los despachos del país. Lead magnet con doble incentivo: aparecer en el ranking público + Kabilio lanza encuesta de satisfacción a sus clientes.</p>
+      <h3><svg class="icon"><use href="#i-magnet"/></svg>El mecanismo en tres pasos</h3>
+      <div class="flow">
+        <div class="flow-step"><svg class="icon"><use href="#i-clipboard"/></svg><p class="flow-step-title">Despacho rellena encuesta</p><p class="flow-step-sub">Auto-reporte de digitalización, procesos, tooling</p></div>
+        <span class="flow-arrow"><svg class="icon"><use href="#i-arrow-right"/></svg></span>
+        <div class="flow-step"><svg class="icon"><use href="#i-users"/></svg><p class="flow-step-title">Kabilio encuesta a sus pymes</p><p class="flow-step-sub">NPS, satisfacción. Opt-in del despacho</p></div>
+        <span class="flow-arrow"><svg class="icon"><use href="#i-arrow-right"/></svg></span>
+        <div class="flow-step"><svg class="icon"><use href="#i-trophy"/></svg><p class="flow-step-title">Ranking público + scorecard</p><p class="flow-step-sub">Listado nacional + informe privado</p></div>
+      </div>
+      <h3><svg class="icon"><use href="#i-clipboard"/></svg>Qué le preguntamos al despacho</h3>
+      <div class="grid-2">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-cpu"/></svg>Digitalización</p><p class="card-body">% del flujo automatizado, herramientas, integración con software contable, conciliación, firma electrónica.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-clipboard"/></svg>Operativa</p><p class="card-body">Tiempo medio de cierre mensual, plazos de respuesta, % declaraciones sin requerimiento.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-users"/></svg>Estructura y cartera</p><p class="card-body">Tamaño de cartera, mezcla de cliente, sectores predominantes, equipo, certificaciones.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-leaf"/></svg>Especialización</p><p class="card-body">Sectores donde tiene experiencia, servicios consultivos, asesoramiento estratégico.</p></div>
+      </div>
+      <h3><svg class="icon"><use href="#i-survey"/></svg>Qué le preguntamos a la pyme cliente</h3>
+      <div class="grid-2">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-target"/></svg>Satisfacción y NPS</p><p class="card-body">Net Promoter Score, satisfacción global, tiempo medio de respuesta percibido.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-trending-up"/></svg>Valor percibido</p><p class="card-body">Tipo de asesoramiento (operativo vs estratégico), proactividad, percepción de eficiencia digital.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="s-cert">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-cert"/></svg><h1>Sistema de Certificación</h1></div>
+      <p class="quote">Programa público de sellos derivado del Sistema de Evaluación. Doble función: retiene al despacho (el sello es un activo profesional con coste de salida) y le trae clientes vía SEO geográfico.</p>
+      <h3><svg class="icon"><use href="#i-shield-check"/></svg>Niveles de calidad — capa 1 vertical</h3>
+      <div class="grid-3">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-shield-check"/></svg>Certificada</p><p class="card-body">Entry level. Cumple mínimos auditables.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-shield-star"/></svg>Premium</p><p class="card-body">Top intermedio. Marca diferencial visible.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-crown"/></svg>Excelencia</p><p class="card-body">Top escaso. Mención en evento anual.</p></div>
+      </div>
+      <h3><svg class="icon"><use href="#i-grid"/></svg>Sellos de especialización — capa 2 acumulable</h3>
+      <div class="grid-2">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-briefcase"/></svg>Sectorial</p><p class="card-body">Sub-sellos por sector: hostelería, e-commerce, profesional, internacional.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-cpu"/></svg>Tecnológica</p><p class="card-body">Alto grado de digitalización y adopción de herramientas avanzadas.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-globe"/></svg>Internacional</p><p class="card-body">Clientes con operación transfronteriza, fiscalidad internacional.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-leaf"/></svg>Sostenible</p><p class="card-body">Capacidades de reporting ESG y asesoramiento en sostenibilidad.</p></div>
+      </div>
+      <h3><svg class="icon"><use href="#i-target"/></svg>Función dual</h3>
+      <div class="grid-2">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-lock"/></svg>Retención</p><p class="card-body">El sello es un activo profesional con coste de salida real.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-users"/></svg>Adquisición</p><p class="card-body">Canal natural por el que la pyme encuentra asesoría vía SEO geográfico.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="s-eventos">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-confetti"/></svg><h1>Eventos y Premios</h1></div>
+      <p class="quote">La cara visible de la marca. Piloto regional → evento nacional → gran cumbre anual. Relación con prensa, asociaciones y celebración pública del Sistema de Certificación con la entrega de premios.</p>
+      <div class="htimeline">
+        <div class="htimeline-track"></div>
+        <div class="htimeline-row">
+          <div class="ht-step"><div class="ht-marker"><svg class="icon"><use href="#i-flag"/></svg></div><p class="ht-year">Año 1</p><p class="ht-title">Piloto regional</p></div>
+          <div class="ht-step"><div class="ht-marker"><svg class="icon"><use href="#i-building"/></svg></div><p class="ht-year">Año 2</p><p class="ht-title">Evento nacional</p></div>
+          <div class="ht-step"><div class="ht-marker"><svg class="icon"><use href="#i-trophy"/></svg></div><p class="ht-year">Año 3</p><p class="ht-title">Gran cumbre anual</p></div>
+        </div>
+      </div>
+      <h3><svg class="icon"><use href="#i-crown"/></svg>Premio principal</h3>
+      <div class="card" style="border-left: 3px solid var(--accent);"><p class="card-title"><svg class="icon"><use href="#i-medal"/></svg>Despacho del Año</p><p class="card-body">Uno solo a nivel nacional. Máximo galardón en el gran evento. Mejor puntuación global en el Índice de Excelencia.</p></div>
+      <h3><svg class="icon"><use href="#i-target"/></svg>Premios por categoría temática</h3>
+      <div class="grid-2">
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-zap"/></svg>Eficiencia Operativa</p><p class="card-body">Mejores tiempos de procesamiento y cierre.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-users"/></svg>Servicio al Cliente</p><p class="card-body">Mejor NPS y retención de cartera.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-cpu"/></svg>Innovación Tecnológica</p><p class="card-body">Mayor profundidad digital.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-shield-check"/></svg>Cumplimiento Fiscal</p><p class="card-body">Mejor track record contra AEAT.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-medal"/></svg>Trayectoria</p><p class="card-body">Despacho con histórico y aportación al sector.</p></div>
+        <div class="card"><p class="card-title"><svg class="icon"><use href="#i-rocket"/></svg>Despacho Emergente</p><p class="card-body">Despacho joven con crecimiento sobresaliente.</p></div>
+      </div>
+      <h3><svg class="icon"><use href="#i-briefcase"/></svg>Premios por especialización sectorial</h3>
+      <div class="grid-2">
+        <div class="stat-card"><p class="stat-label">Hostelería y restauración</p><p class="stat-value">Mejor despacho sectorial</p></div>
+        <div class="stat-card"><p class="stat-label">Comercio y retail</p><p class="stat-value">Mejor despacho sectorial</p></div>
+        <div class="stat-card"><p class="stat-label">E-commerce</p><p class="stat-value">Mejor despacho sectorial</p></div>
+        <div class="stat-card"><p class="stat-label">Servicios profesionales</p><p class="stat-value">Mejor despacho sectorial</p></div>
+        <div class="stat-card"><p class="stat-label">Construcción</p><p class="stat-value">Mejor despacho sectorial</p></div>
+        <div class="stat-card"><p class="stat-label">Manufactura</p><p class="stat-value">Mejor despacho sectorial</p></div>
+        <div class="stat-card"><p class="stat-label">Agroalimentación</p><p class="stat-value">Mejor despacho sectorial</p></div>
+        <div class="stat-card"><p class="stat-label">Internacional</p><p class="stat-value">Operación transfronteriza</p></div>
+      </div>
+      <h3><svg class="icon"><use href="#i-map"/></svg>Premios regionales</h3>
+      <p class="url-desc">Mejor despacho del año por CCAA (17 reconocimientos potenciales) más posibles premios provinciales en Madrid, Barcelona y Valencia.</p>
+    </section>
+
+    <section class="section" id="s-seo">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-link"/></svg><h1>SEO &amp; Data Hub</h1></div>
+      <p class="quote">Varias capas SEO complementarias bajo el dominio kabilio.es. Cada una es contenido único derivado de datos propios y se refuerza mutuamente para construir autoridad de dominio.</p>
+      <div class="ptabs" data-group="seo">
+        <button class="ptab active" data-target="seo-datahub"><svg class="icon"><use href="#i-database"/></svg>Data Hub</button>
+        <button class="ptab" data-target="seo-ranking"><svg class="icon"><use href="#i-trophy"/></svg>Rankings geográficos</button>
+        <button class="ptab" data-target="seo-normativa"><svg class="icon"><use href="#i-flag"/></svg>Normativa</button>
+        <button class="ptab" data-target="seo-pildoras"><svg class="icon"><use href="#i-linkedin"/></svg>Archivo píldoras</button>
+      </div>
+      <div class="ppane active" data-group="seo" id="seo-datahub">
+        <h3><svg class="icon"><use href="#i-database"/></svg>Data Hub público — asociado al Pulso Kabilio</h3>
+        <p class="url-desc">Cada métrica × cada corte = URL única indexable. Concepto análogo a datosmacro.com.</p>
+        <div class="url-group"><p class="url-group-title">Páginas por métrica nacional</p><code class="url-block">kabilio.es/datos/<span class="placeholder">[métrica]</span></code><p class="url-desc">Ejemplos: /datos/dso-real · /datos/inflacion-operativa</p></div>
+        <div class="url-group"><p class="url-group-title">Páginas por métrica + CCAA</p><code class="url-block">kabilio.es/datos/<span class="placeholder">[métrica]</span>/ccaa/<span class="placeholder">[ccaa]</span></code><p class="url-desc">Ejemplo: /datos/dso-real/ccaa/madrid</p></div>
+        <div class="url-group"><p class="url-group-title">Páginas por métrica + sector</p><code class="url-block">kabilio.es/datos/<span class="placeholder">[métrica]</span>/sector/<span class="placeholder">[sector]</span></code></div>
+        <div class="url-group"><p class="url-group-title">Long-tail: métrica + sector + CCAA</p><code class="url-block">kabilio.es/datos/<span class="placeholder">[métrica]</span>/<span class="placeholder">[sector]</span>/<span class="placeholder">[ccaa]</span></code></div>
+        <div class="url-group"><p class="url-group-title">Páginas índice por categoría</p><code class="url-block">kabilio.es/datos/<span class="placeholder">[categoria]</span></code><p class="url-desc">Ejemplos: /datos/morosidad · /datos/liquidez</p></div>
+      </div>
+      <div class="ppane" data-group="seo" id="seo-ranking">
+        <h3><svg class="icon"><use href="#i-trophy"/></svg>Rankings geográficos</h3>
+        <p class="url-desc">Despachos rankeados mostrados públicamente con datos del Data Hub como contexto.</p>
+        <div class="url-group"><p class="url-group-title">Ranking principal y por CCAA</p><code class="url-block">kabilio.es/ranking-asesorias</code><code class="url-block">kabilio.es/ranking-asesorias/ccaa/<span class="placeholder">[ccaa]</span></code></div>
+        <div class="url-group"><p class="url-group-title">Ranking por sector</p><code class="url-block">kabilio.es/ranking-asesorias/sector/<span class="placeholder">[sector]</span></code></div>
+        <div class="url-group"><p class="url-group-title">Ranking por ciudad (long-tail)</p><code class="url-block">kabilio.es/asesorias/<span class="placeholder">[ciudad]</span></code><code class="url-block">kabilio.es/asesoria-<span class="placeholder">[sector]</span>/<span class="placeholder">[ciudad]</span></code></div>
+        <div class="url-group"><p class="url-group-title">Página perfil del despacho</p><code class="url-block">kabilio.es/asesoria/<span class="placeholder">[slug]</span></code></div>
+      </div>
+      <div class="ppane" data-group="seo" id="seo-normativa">
+        <h3><svg class="icon"><use href="#i-flag"/></svg>Páginas temáticas y normativas</h3>
+        <div class="url-group"><p class="url-group-title">Guías sobre normativa</p><code class="url-block">kabilio.es/<span class="placeholder">[normativa]</span></code><p class="url-desc">Ejemplos: /verifactu · /facturacion-electronica · /sii · /tickbai</p></div>
+        <div class="url-group"><p class="url-group-title">Glosario y conceptos</p><code class="url-block">kabilio.es/glosario/<span class="placeholder">[termino]</span></code></div>
+      </div>
+      <div class="ppane" data-group="seo" id="seo-pildoras">
+        <h3><svg class="icon"><use href="#i-linkedin"/></svg>Archivo de píldoras de LinkedIn</h3>
+        <div class="url-group"><p class="url-group-title">Página individual de píldora</p><code class="url-block">kabilio.es/pulso/<span class="placeholder">[slug-del-post]</span></code><p class="url-desc">Cada píldora archivada con titular, gráfico, fecha y contexto. Reutilizable como referencia.</p></div>
+        <div class="url-group"><p class="url-group-title">Índice del archivo</p><code class="url-block">kabilio.es/pulso</code><p class="url-desc">Página de listado con todas las píldoras, filtrable por tema y fecha.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="s-riesgos">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-shield-warn"/></svg><h1>Riesgos y mitigaciones</h1></div>
+      <h3><svg class="icon"><use href="#i-check-circle"/></svg>Mitigados por diseño</h3>
+      <div class="risk-card risk-mitigated"><svg class="icon"><use href="#i-check-circle"/></svg><div><strong>Conflicto de interés del sistema de evaluación.</strong> Encuesta nacional abierta y metodología pública.</div></div>
+      <div class="risk-card risk-mitigated"><svg class="icon"><use href="#i-check-circle"/></svg><div><strong>Sobrepromesa del Índice Kabilio.</strong> No se publica en año 1.</div></div>
+      <div class="risk-card risk-mitigated"><svg class="icon"><use href="#i-check-circle"/></svg><div><strong>Churn defensivo.</strong> Solo reconocimientos positivos.</div></div>
+      <div class="risk-card risk-mitigated"><svg class="icon"><use href="#i-check-circle"/></svg><div><strong>Marketplace formal.</strong> Descubribilidad sin intermediación.</div></div>
+      <h3><svg class="icon"><use href="#i-alert"/></svg>Pendientes de cerrar</h3>
+      <div class="risk-card risk-pending"><svg class="icon"><use href="#i-alert"/></svg><div><strong>Blindaje RGPD.</strong> K-anonymity, opt-in, revisión legal. Bloqueante.</div></div>
+      <div class="risk-card risk-pending"><svg class="icon"><use href="#i-alert"/></svg><div><strong>Significancia estadística.</strong> Auditar muestra por corte.</div></div>
+      <div class="risk-card risk-pending"><svg class="icon"><use href="#i-alert"/></svg><div><strong>Volumen de respuesta a la encuesta.</strong> Atraer masa crítica de despachos.</div></div>
+      <div class="risk-card risk-pending"><svg class="icon"><use href="#i-alert"/></svg><div><strong>Replicabilidad por competidores.</strong> Velocidad y apropiación temprana.</div></div>
+    </section>
+
+    <section class="section" id="s-next">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-arrow-right"/></svg><h1>Próximos pasos</h1></div>
+      <h3><svg class="icon"><use href="#i-target"/></svg>Tres decisiones que pide el memo</h3>
+      <div class="decision-card"><span class="num">1</span>Compromiso con estrategia de marca sostenida a 18-24 meses como mínimo.</div>
+      <div class="decision-card"><span class="num">2</span>Coste de credibilidad innegociable (comité externo, metodología pública, auditoría).</div>
+      <div class="decision-card"><span class="num">3</span>Despliegue MVP escalonado con nombres honestos en cada fase.</div>
+      <h3><svg class="icon"><use href="#i-route"/></svg>Pendientes operativos · 4-6 semanas</h3>
+      <ul class="next-list">
+        <li>Auditoría legal RGPD del Pulso y del Data Hub.</li>
+        <li>Auditoría estadística de la base actual.</li>
+        <li>Diseño de la encuesta nacional al despacho y a las pymes.</li>
+        <li>Arquitectura técnica del Data Hub público.</li>
+        <li>Plan de distribución de las primeras píldoras en LinkedIn.</li>
+        <li>Plan operativo del año 1 con partidas presupuestarias.</li>
+      </ul>
+    </section>
+
+    <section class="section" id="s-status">
+      <div class="section-header"><svg class="icon icon-xl"><use href="#i-kanban"/></svg><h1>Status del plan</h1></div>
+      <p class="quote">Gestor de proyectos pre-cargado con las tareas necesarias para ejecutar la estrategia. Lo que añadas, muevas o anotes se guarda en tu navegador.</p>
+      <div class="kanban-toolbar">
+        <div class="kanban-stat"><span class="dot dot-todo"></span><strong id="count-todo">0</strong> por hacer</div>
+        <div class="kanban-stat"><span class="dot dot-doing"></span><strong id="count-doing">0</strong> en curso</div>
+        <div class="kanban-stat"><span class="dot dot-done"></span><strong id="count-done">0</strong> hechas</div>
+        <div class="kanban-spacer"></div>
+        <button class="kanban-add-btn" id="kanban-add-btn"><svg class="icon"><use href="#i-plus"/></svg>Añadir tarea</button>
+      </div>
+      <form class="kanban-add-form" id="kanban-add-form">
+        <input type="text" placeholder="Título de la tarea" id="new-title" required>
+        <textarea placeholder="Descripción (opcional)" id="new-desc"></textarea>
+        <div class="row">
+          <select id="new-cat">
+            <option value="bloqueante">Bloqueante</option>
+            <option value="decision">Decisión</option>
+            <option value="pulso">Pulso</option>
+            <option value="encuesta">Encuesta</option>
+            <option value="certificacion">Certificación</option>
+            <option value="seo">SEO</option>
+            <option value="eventos">Eventos</option>
+            <option value="marca">Marca</option>
+            <option value="gobernanza">Gobernanza</option>
+          </select>
+          <select id="new-status">
+            <option value="todo">Por hacer</option>
+            <option value="doing">En curso</option>
+            <option value="done">Hecho</option>
+          </select>
+        </div>
+        <div class="actions">
+          <button type="button" class="cancel" id="kanban-cancel-btn">Cancelar</button>
+          <button type="submit">Crear tarea</button>
+        </div>
+      </form>
+      <div class="kanban-filter" id="kanban-filter">
+        <button class="kfilter-btn active" data-cat="all">Todas</button>
+        <button class="kfilter-btn" data-cat="bloqueante">Bloqueante</button>
+        <button class="kfilter-btn" data-cat="decision">Decisión</button>
+        <button class="kfilter-btn" data-cat="pulso">Pulso</button>
+        <button class="kfilter-btn" data-cat="encuesta">Encuesta</button>
+        <button class="kfilter-btn" data-cat="certificacion">Certificación</button>
+        <button class="kfilter-btn" data-cat="seo">SEO</button>
+        <button class="kfilter-btn" data-cat="eventos">Eventos</button>
+        <button class="kfilter-btn" data-cat="marca">Marca</button>
+        <button class="kfilter-btn" data-cat="gobernanza">Gobernanza</button>
+      </div>
+      <div class="kanban">
+        <div class="kcol" data-col="todo"><div class="kcol-header"><p class="kcol-title"><span class="dot dot-todo"></span>Por hacer</p><span class="kcol-count" id="col-count-todo">0</span></div><div class="kcol-body" id="col-todo"></div></div>
+        <div class="kcol" data-col="doing"><div class="kcol-header"><p class="kcol-title"><span class="dot dot-doing"></span>En curso</p><span class="kcol-count" id="col-count-doing">0</span></div><div class="kcol-body" id="col-doing"></div></div>
+        <div class="kcol" data-col="done"><div class="kcol-header"><p class="kcol-title"><span class="dot dot-done"></span>Hecho</p><span class="kcol-count" id="col-count-done">0</span></div><div class="kcol-body" id="col-done"></div></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(function() {
+  var nav = document.getElementById('nav');
+  var sections = document.querySelectorAll('.section');
+  var navItems = nav.querySelectorAll('.nav-item');
+  var app = document.getElementById('app');
+  var collapseBtn = document.getElementById('collapse-btn');
+
+  try {
+    if (localStorage.getItem('kabilio-sidebar-collapsed') === '1') app.classList.add('collapsed');
+  } catch (e) {}
+
+  collapseBtn.addEventListener('click', function() {
+    app.classList.toggle('collapsed');
+    try { localStorage.setItem('kabilio-sidebar-collapsed', app.classList.contains('collapsed') ? '1' : '0'); } catch (e) {}
+  });
+
+  function show(id) {
+    sections.forEach(function(s) { s.classList.toggle('active', s.id === id); });
+    navItems.forEach(function(b) { b.classList.toggle('active', b.dataset.target === id); });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  navItems.forEach(function(btn) { btn.addEventListener('click', function() { show(btn.dataset.target); }); });
+
+  var filterButtons = document.querySelectorAll('.filter-btn');
+  var metricRows = document.querySelectorAll('#metrics-list .metric-row');
+  filterButtons.forEach(function(fb) {
+    fb.addEventListener('click', function() {
+      var f = fb.dataset.filter;
+      filterButtons.forEach(function(b) { b.classList.toggle('active', b === fb); });
+      metricRows.forEach(function(r) { r.style.display = (f === 'all' || r.dataset.block === f) ? 'flex' : 'none'; });
+    });
+  });
+
+  document.querySelectorAll('.ptab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      var group = tab.closest('.ptabs').dataset.group;
+      var target = tab.dataset.target;
+      document.querySelectorAll('.ptabs[data-group="' + group + '"] .ptab').forEach(function(t) { t.classList.toggle('active', t === tab); });
+      document.querySelectorAll('.ppane[data-group="' + group + '"]').forEach(function(p) { p.classList.toggle('active', p.id === target); });
+    });
+  });
+
+  document.querySelectorAll('[data-nav]').forEach(function(el) {
+    el.addEventListener('click', function() { show(el.dataset.nav); });
+    el.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); show(el.dataset.nav); }
+    });
+  });
+
+  // Kanban
+  var STORAGE_KEY = 'kabilio-kanban-tasks-v1';
+  var defaultTasks = [
+    { id: 't1', title: 'Auditoría legal RGPD del Pulso y Data Hub', description: 'K-anonymity, opt-in, revisión legal previa. Bloqueante para primer informe.', category: 'bloqueante', status: 'todo', notes: '' },
+    { id: 't2', title: 'Auditoría estadística de la base actual', description: 'Mapear qué cortes (CCAA, sector, tamaño) tienen muestra suficiente para publicar con rigor.', category: 'bloqueante', status: 'todo', notes: '' },
+    { id: 't3', title: 'Aprobar compromiso 18-24 meses', description: 'Decisión 1 del memo: estrategia sostenida.', category: 'decision', status: 'todo', notes: '' },
+    { id: 't4', title: 'Aprobar coste de credibilidad', description: 'Decisión 2: comité externo + metodología pública + auditoría como innegociables.', category: 'decision', status: 'todo', notes: '' },
+    { id: 't5', title: 'Aprobar despliegue MVP escalonado', description: 'Decisión 3: nombres honestos por fase, no lanzar todo de golpe.', category: 'decision', status: 'todo', notes: '' },
+    { id: 't6', title: 'Definir 14 métricas con producto', description: 'Validar contra base real cuáles son publicables. Cerrar fuentes y aperturas.', category: 'pulso', status: 'todo', notes: '' },
+    { id: 't7', title: 'Cerrar alcance editorial del primer Pulso', description: 'Decidir qué pilares y cortes entran en la v1.', category: 'pulso', status: 'todo', notes: '' },
+    { id: 't8', title: 'Producir primer Pulso Kabilio', description: 'Redacción, diseño, dataset, gráficos, press kit.', category: 'pulso', status: 'todo', notes: '' },
+    { id: 't9', title: 'Plan de distribución mediática', description: 'Embargo a 2-3 medios tier 1 + press kits por CCAA.', category: 'pulso', status: 'todo', notes: '' },
+    { id: 't10', title: 'Plantilla visual de píldora', description: 'Diseño base reutilizable de píldoras de marca para LinkedIn.', category: 'marca', status: 'todo', notes: '' },
+    { id: 't11', title: 'Calendario primeras 8 píldoras', description: 'Datos validados para el primer mes y medio de publicaciones.', category: 'marca', status: 'todo', notes: '' },
+    { id: 't12', title: 'Definir cast de amplificación interna', description: 'CEO, Head of Data, Head of Marketing, Customer Success, Sales.', category: 'marca', status: 'todo', notes: '' },
+    { id: 't13', title: 'Asignar ángulos editoriales por perfil', description: 'Cada miembro tiene su voz: visión, método, narrativa, voz cliente, mercado.', category: 'marca', status: 'todo', notes: '' },
+    { id: 't14', title: 'Actualizar bios personales con CTA', description: 'Cada perfil personal con enlace al lead magnet vigente.', category: 'marca', status: 'todo', notes: '' },
+    { id: 't15', title: 'Sistema SDR de monitoreo LinkedIn', description: 'Quién monitorea comentadores y cuándo se hace outreach por DM.', category: 'marca', status: 'todo', notes: '' },
+    { id: 't16', title: 'Diseñar cuestionario al despacho', description: 'Encuesta nacional: digitalización, operativa, estructura, especialización.', category: 'encuesta', status: 'todo', notes: '' },
+    { id: 't17', title: 'Diseñar cuestionario a pymes', description: 'NPS, satisfacción, valor percibido. Que Kabilio lanza por encargo del despacho.', category: 'encuesta', status: 'todo', notes: '' },
+    { id: 't18', title: 'Mecánica del lead magnet', description: 'Página de aterrizaje, email de confirmación, flujo de inscripción del despacho.', category: 'encuesta', status: 'todo', notes: '' },
+    { id: 't19', title: 'Plataforma para alojar encuestas', description: 'Herramienta y flujo técnico para gestionar respuestas y resultados.', category: 'encuesta', status: 'todo', notes: '' },
+    { id: 't20', title: 'Algoritmo del primer ranking básico', description: 'Scoring inicial sobre auto-reporte + NPS recibido.', category: 'encuesta', status: 'todo', notes: '' },
+    { id: 't21', title: 'Definir umbrales de niveles de certificación', description: 'Certificada / Premium / Excelencia con criterios por puntuación.', category: 'certificacion', status: 'todo', notes: '' },
+    { id: 't22', title: 'Diseñar sello visual descargable', description: 'Asset gráfico + código embed para web del despacho.', category: 'certificacion', status: 'todo', notes: '' },
+    { id: 't23', title: 'Cerrar lista de sellos de especialización', description: 'Verticales: hostelería, ecommerce, internacional, sostenible...', category: 'certificacion', status: 'todo', notes: '' },
+    { id: 't24', title: 'Plataforma de gestión de sellos', description: 'Backend para otorgar, renovar y revocar sellos.', category: 'certificacion', status: 'todo', notes: '' },
+    { id: 't25', title: 'Plan completo de URLs SEO', description: 'Estructura final de Data Hub + Rankings + temáticas + perfiles despacho.', category: 'seo', status: 'todo', notes: '' },
+    { id: 't26', title: 'Arquitectura técnica del Data Hub', description: 'Plantilla de página, pipeline de generación, integración con CMS.', category: 'seo', status: 'todo', notes: '' },
+    { id: 't27', title: 'Primer batch de páginas Data Hub', description: 'Páginas nacionales por métrica para lanzar con primer Pulso.', category: 'seo', status: 'todo', notes: '' },
+    { id: 't28', title: 'Páginas de Rankings geográficos', description: 'Por CCAA, sector y ciudad. Maquetación y CMS.', category: 'seo', status: 'todo', notes: '' },
+    { id: 't29', title: 'Páginas temáticas normativas', description: 'Verifactu, facturación electrónica, glosario de términos.', category: 'seo', status: 'todo', notes: '' },
+    { id: 't30', title: 'Definir formato y ciudad del piloto', description: 'Breakfast briefing año 1. Ciudad TBD: Madrid, Barcelona, Valencia.', category: 'eventos', status: 'todo', notes: '' },
+    { id: 't31', title: 'Lista de invitados primer evento', description: 'Prensa local + asesorías clave de la zona seleccionada.', category: 'eventos', status: 'todo', notes: '' },
+    { id: 't32', title: 'Criterios de premios año 2-3', description: 'Mecánica de selección, jurado, comunicación.', category: 'eventos', status: 'todo', notes: '' },
+    { id: 't33', title: 'Mapa de candidatos al comité externo', description: 'Académico, periodista económico, representante institucional.', category: 'gobernanza', status: 'todo', notes: '' },
+    { id: 't34', title: 'Acercamiento a 2-3 asociaciones', description: 'AECE, FETTAF, Colegios profesionales. Para convenios año 2.', category: 'gobernanza', status: 'todo', notes: '' },
+    { id: 't35', title: 'Identidad visual del Pulso Kabilio', description: 'Logotipo, wordmark, paleta, hashtag #PulsoKabilio consistente.', category: 'marca', status: 'todo', notes: '' }
+  ];
+
+  var tasks = [];
+  try {
+    var saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) tasks = JSON.parse(saved);
+    else tasks = defaultTasks.slice();
+  } catch (e) { tasks = defaultTasks.slice(); }
+
+  var activeFilter = 'all';
+  var addBtn = document.getElementById('kanban-add-btn');
+  var addForm = document.getElementById('kanban-add-form');
+  var cancelBtn = document.getElementById('kanban-cancel-btn');
+
+  function saveTasks() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks)); } catch (e) {}
+  }
+
+  function catLabel(cat) {
+    return cat.charAt(0).toUpperCase() + cat.slice(1);
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function(c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; });
+  }
+
+  function renderTask(task) {
+    var notesBlock = task.notes ? '<p class="ktask-notes">' + escapeHtml(task.notes) + '</p>' : '';
+    return '<div class="ktask" data-id="' + task.id + '" data-cat="' + task.category + '">' +
+      '<span class="ktask-cat cat-' + task.category + '">' + catLabel(task.category) + '</span>' +
+      '<p class="ktask-title">' + escapeHtml(task.title) + '</p>' +
+      (task.description ? '<p class="ktask-desc">' + escapeHtml(task.description) + '</p>' : '') +
+      notesBlock +
+      '<div class="ktask-actions">' +
+        '<select class="ktask-status" data-id="' + task.id + '">' +
+          '<option value="todo"' + (task.status === 'todo' ? ' selected' : '') + '>Por hacer</option>' +
+          '<option value="doing"' + (task.status === 'doing' ? ' selected' : '') + '>En curso</option>' +
+          '<option value="done"' + (task.status === 'done' ? ' selected' : '') + '>Hecho</option>' +
+        '</select>' +
+        '<button class="ktask-btn" data-action="edit" data-id="' + task.id + '" title="Editar"><svg class="icon"><use href="#i-edit"/></svg></button>' +
+        '<button class="ktask-btn" data-action="delete" data-id="' + task.id + '" title="Eliminar"><svg class="icon"><use href="#i-trash"/></svg></button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function render() {
+    var cols = { todo: [], doing: [], done: [] };
+    tasks.forEach(function(t) {
+      if (activeFilter !== 'all' && t.category !== activeFilter) return;
+      if (cols[t.status]) cols[t.status].push(t);
+    });
+    ['todo', 'doing', 'done'].forEach(function(s) {
+      var el = document.getElementById('col-' + s);
+      if (cols[s].length === 0) {
+        el.innerHTML = '<p class="kanban-empty">Sin tareas</p>';
+      } else {
+        el.innerHTML = cols[s].map(renderTask).join('');
+      }
+      document.getElementById('col-count-' + s).textContent = cols[s].length;
+    });
+    var total = { todo: 0, doing: 0, done: 0 };
+    tasks.forEach(function(t) { if (total[t.status] !== undefined) total[t.status]++; });
+    document.getElementById('count-todo').textContent = total.todo;
+    document.getElementById('count-doing').textContent = total.doing;
+    document.getElementById('count-done').textContent = total.done;
+    attachTaskHandlers();
+  }
+
+  function attachTaskHandlers() {
+    document.querySelectorAll('.ktask-status').forEach(function(sel) {
+      sel.addEventListener('change', function() {
+        var id = sel.dataset.id;
+        var task = tasks.find(function(t) { return t.id === id; });
+        if (task) { task.status = sel.value; saveTasks(); render(); }
+      });
+    });
+    document.querySelectorAll('.ktask-btn[data-action="delete"]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        if (!confirm('¿Eliminar esta tarea?')) return;
+        var id = btn.dataset.id;
+        tasks = tasks.filter(function(t) { return t.id !== id; });
+        saveTasks();
+        render();
+      });
+    });
+    document.querySelectorAll('.ktask-btn[data-action="edit"]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = btn.dataset.id;
+        var task = tasks.find(function(t) { return t.id === id; });
+        if (!task) return;
+        var cardEl = document.querySelector('.ktask[data-id="' + id + '"]');
+        if (cardEl.querySelector('.ktask-edit-form')) return;
+        var form = document.createElement('div');
+        form.className = 'ktask-edit-form';
+        form.innerHTML = '<input type="text" class="edit-title" value="' + escapeHtml(task.title) + '">' +
+          '<textarea class="edit-desc" placeholder="Descripción">' + escapeHtml(task.description || '') + '</textarea>' +
+          '<textarea class="edit-notes" placeholder="Notas privadas">' + escapeHtml(task.notes || '') + '</textarea>' +
+          '<select class="edit-cat">' +
+            ['bloqueante','decision','pulso','encuesta','certificacion','seo','eventos','marca','gobernanza'].map(function(c) {
+              return '<option value="' + c + '"' + (task.category === c ? ' selected' : '') + '>' + catLabel(c) + '</option>';
+            }).join('') +
+          '</select>' +
+          '<div class="actions"><button class="cancel" type="button">Cancelar</button><button type="button" class="save-btn">Guardar</button></div>';
+        cardEl.appendChild(form);
+        form.querySelector('.cancel').addEventListener('click', function() { form.remove(); });
+        form.querySelector('.save-btn').addEventListener('click', function() {
+          task.title = form.querySelector('.edit-title').value.trim() || task.title;
+          task.description = form.querySelector('.edit-desc').value.trim();
+          task.notes = form.querySelector('.edit-notes').value.trim();
+          task.category = form.querySelector('.edit-cat').value;
+          saveTasks();
+          render();
+        });
+      });
+    });
+  }
+
+  addBtn.addEventListener('click', function() { addForm.classList.toggle('open'); });
+  cancelBtn.addEventListener('click', function() { addForm.classList.remove('open'); addForm.reset(); });
+  addForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    var newTask = {
+      id: 'u' + Date.now(),
+      title: document.getElementById('new-title').value.trim(),
+      description: document.getElementById('new-desc').value.trim(),
+      category: document.getElementById('new-cat').value,
+      status: document.getElementById('new-status').value,
+      notes: ''
+    };
+    if (!newTask.title) return;
+    tasks.unshift(newTask);
+    saveTasks();
+    render();
+    addForm.reset();
+    addForm.classList.remove('open');
+  });
+
+  document.querySelectorAll('#kanban-filter .kfilter-btn').forEach(function(b) {
+    b.addEventListener('click', function() {
+      activeFilter = b.dataset.cat;
+      document.querySelectorAll('#kanban-filter .kfilter-btn').forEach(function(x) { x.classList.toggle('active', x === b); });
+      render();
+    });
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
